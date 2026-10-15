@@ -1,5 +1,6 @@
 {
   "mode": "company",
-  "installer_version": "1.1",
-  "case_data_included": false
+  "installer_version": "1.2",
+  "case_data_included": false,
+  "skill_version": "1.2.0"
 }

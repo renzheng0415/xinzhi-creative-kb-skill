@@ -1,4 +1,4 @@
-"""Read-only client for the company NAS through company LAN."""
+"""Read-only client for the company NAS through the company LAN."""
 import json
 import os
 import re
@@ -41,12 +41,12 @@ class KBClient:
                     return
             except (OSError, ValueError, RuntimeError):
                 continue
-        raise RuntimeError('公司 NAS 暂时不可达：请接入公司网络，')
+        raise RuntimeError('公司 NAS 暂时不可达：请接入公司网络。')
 
     def request(self, path, body=None, timeout=20):
-        if path not in ('/api/health', '/api/filters', '/api/search') and not re.fullmatch(r'/api/assets/[\w-]{1,100}', path):
+        if path not in ('/api/health', '/api/filters', '/api/search', '/api/reference-options', '/api/references/search', '/api/references/read') and not re.fullmatch(r'/api/assets/[\w-]{1,100}', path):
             raise ValueError('只允许只读知识库接口')
-        if body is not None and path != '/api/search':
+        if body is not None and path not in ('/api/search', '/api/references/search', '/api/references/read'):
             raise ValueError('此接口只允许读取')
         req = urllib.request.Request(self.base + path,
             data=json.dumps(body, ensure_ascii=False).encode('utf-8') if body is not None else None,
@@ -115,3 +115,21 @@ class KBClient:
             raise ValueError('单个样本超过 50MB，请使用原件链接')
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(raw)
+
+    def references(self, **body):
+        result = self.request('/api/references/search', body)
+        for asset in result['items']:
+            asset['links'] = self.links(asset)
+            for unit in asset.get('evidence_units', []):
+                unit['url'] = self.file_url(unit.get('image_path'))
+                for evidence in unit.get('evidence', []):
+                    evidence['url'] = self.file_url(evidence.get('image_path'))
+        result['connection'] = {'base_url': self.base, 'source': 'company NAS'}
+        return result
+
+    def context(self, asset_id, page=1, radius=1):
+        result = self.request('/api/references/read', {'asset_id': asset_id, 'page': page, 'radius': radius})
+        result['original_url'] = self.file_url(result['asset']['original_path'])
+        for item in result['pages']:
+            item['url'] = self.file_url(item.get('image_path'))
+        return result

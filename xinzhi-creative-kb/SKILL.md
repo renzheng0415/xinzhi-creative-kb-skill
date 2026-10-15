@@ -5,13 +5,19 @@ description: 从公司NAS的心智创意知识库检索项目案例、方案页�
 
 # 心智创意知识库
 
+**当前部署方式：NAS保存索引与原件，当前智能体负责理解Brief和判断适配性。NAS不运行大模型。** 按项目找参考时，先读[项目参考工作流](references/project-reference-workflow.md)。每次任务运行 `scripts/find_references.py --options` 读取服务端当前用途、覆盖与工作步骤，再做用途/页级检索；原有 `query_cases.py` 继续用于全源目录与网站筛选。
+
+方案使用 `--role project_proposal`，学习资料使用 `--role learning_material`，执行模板使用 `--role execution_tool`。视觉任务可同时传 `--role project_proposal --role visual_reference --require-image`，找到后必须实际查看图像。`material_roles` 和 `classification_basis` 用于识别用途及归类依据，不能把标题规则当作全文人工核验。
+
+用几个短查询分别回应不同业务问题，空格分开的词是AND。例如先查 `--query '区域 认知'`，再查 `--query '客流 渠道'`；保留用户选定的硬条件。不要把整段Brief直接扔进关键词框，也不要因方案提到培训就把它当课件。找到后运行 `scripts/find_references.py --case-id <ID> --page <原页码> --radius 1` 读取命中页和相邻页；段号不是Word排版页码。旧接口仍可用，但页级脚本是本次能力升级，已有旧版安装需要更新一次；日后新增资料入库不需要反复更新脚本。
+
 从公司 NAS 实时读取分类、案例、页面和原件。安装后读取本 Skill 的 `connection.json`，其中已有网络地址、可用 Python 和输出根目录；直接运行附带脚本即可，无需成员手填网址、环境变量或 MCP 配置。所有查询都是只读。使用公司内网 http://192.168.1.251:8798。连接失败时报告，不切到公网镜像或要求开放外网。
 
 **资料保持最新：** 每次新任务先执行 `scripts/query_cases.py --options` 读取网站当下的分类和数量，再执行检索；不缓存案例列表，不把本文中举例的标签当成完整分类。网站新增、修正、删除案例或标签后，下次查询以已发布的最新索引为准，无需重装 Skill。仅复制原始文件到共享盘、尚未入库建索引的资料不会自动出现在检索结果里。网站地址和接口保持兼容时，安装包不随资料更新而更新。
 
 用 `connection.json` 中的 Python 执行脚本，输出写入其中 `work_root` 下的项目检索目录。没有本机安装配置时可使用宿主 Python；默认公司内网 `http://192.168.1.251:8798`。全文提取 PDF 需要 pypdf，缺少依赖时用宿主文档工具补读；提取完成不等于全部资料已读。已有 MCP 工具可继续使用，但正常使用本 Skill 的 HTTP 脚本不依赖 MCP 设置。
 
-网页入口分为方案与案例 `/`、AI 图片画廊 `/ai-images`、AI 视频画廊 `/ai-videos`，三页资料分开。检索参数 `collection` 可选 `cases`、`ai_images`、`ai_videos`、`all`；HTTP 脚本对应 `--collection`，图片画风/用途可加 `--style 海报` 等实际标签。
+网页入口有方案与案例 `/`、AI 生图 `/ai-images`、AI 视频 `/ai-videos`、新媒体短视频 `/short-videos`、新媒体直播 `/livestreams`。检索参数 `collection` 可选 `cases`、`ai_images`、`ai_videos`、`short_videos`、`livestreams`、`all`；HTTP 脚本对应 `--collection`，图片画风/用途可加 `--style 海报` 等实际标签。
 
 视频页面提供视频相关技能和风格、镜头、设计、外部资源记录；当前数量和分类从网站实时读取。按项目需求选择实际分类，如 `--collection ai_videos --style 东方传统 --query 水墨`。结果的 `media.video_path` 指向 NAS 视频，`media.online_video` 指向原作者在线示例；二者分别说明。`fetch_references.py` 会一并取回已有的 NAS 视频供当前会话作为附件使用；在线示例返回来源链接，不承诺离线播放。配音、选题、渲染和设计参考只是视频工作中的部分环节，不能把每个目录入口都宣称为可独立生成成片。
 
