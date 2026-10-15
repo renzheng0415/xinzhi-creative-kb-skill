@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Use the same website filters from WorkBuddy, with no employee password."""
+from ensure_latest import entrypoint
+if __name__ == '__main__':
+    entrypoint(__file__)
 import argparse,json
 from kb_client import KBClient
 def main():

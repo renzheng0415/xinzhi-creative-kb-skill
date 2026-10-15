@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Read live purpose/page evidence; the calling agent interprets the project brief."""
+from ensure_latest import entrypoint
+if __name__ == '__main__':
+    entrypoint(__file__)
 import argparse
 import json
 from kb_client import KBClient

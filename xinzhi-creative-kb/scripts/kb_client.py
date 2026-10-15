@@ -1,5 +1,6 @@
 """Read-only client for the company NAS through the company LAN."""
 import json
+import ipaddress
 import os
 import re
 import urllib.error
@@ -16,10 +17,33 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('知识库连接不跟随重定向')
 
 
-def validate_base(value):
+def local_connection_urls(profile=None):
+    """Honor previously configured private connections without shipping their addresses."""
+    urls = list(ALLOWED_URLS)
+    profile = profile or {}
+    candidates = [profile.get('base_url')] if profile.get('mode') == 'personal' else []
+    local_file = Path(__file__).resolve().parent.parent/'connection.local.json'
+    if local_file.is_file():
+        candidates.extend(json.loads(local_file.read_text(encoding='utf-8')).get('allowed_base_urls', []))
+    for value in candidates:
+        if not isinstance(value, str):
+            continue
+        parsed = urllib.parse.urlsplit(value)
+        try:
+            address = ipaddress.ip_address(parsed.hostname or '')
+            allowed_network = address.is_private or address in ipaddress.ip_network('100.64.0.0/10')
+            valid_port = parsed.port is None or 1 <= parsed.port <= 65535
+        except ValueError:
+            continue
+        if parsed.scheme in ('http', 'https') and allowed_network and valid_port and not parsed.username and not parsed.password and parsed.path in ('','/') and not parsed.query and not parsed.fragment:
+            urls.append(value.rstrip('/'))
+    return tuple(dict.fromkeys(urls))
+
+
+def validate_base(value, allowed=None):
     value = value.rstrip('/')
-    if value not in ALLOWED_URLS:
-        raise ValueError('只允许公司 NAS 内网地址')
+    if value not in (allowed or ALLOWED_URLS):
+        raise ValueError('只允许公司 NAS 内网地址或本机已配置的私有地址')
     return value
 
 
@@ -28,12 +52,14 @@ class KBClient:
         # Company traffic must not go through a system HTTP proxy.
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
         profile = Path(__file__).resolve().parent.parent / 'connection.json'
-        configured = json.loads(profile.read_text(encoding='utf-8')).get('base_url', LAN_URL) if profile.is_file() else LAN_URL
+        settings = json.loads(profile.read_text(encoding='utf-8')) if profile.is_file() else {}
+        configured = settings.get('base_url', LAN_URL)
+        allowed = local_connection_urls(settings)
         chosen = base_url or os.getenv('XINZHI_KB_URL') or configured
         if chosen != 'auto':
-            self.base = validate_base(chosen)
+            self.base = validate_base(chosen, allowed)
             return
-        for candidate in ALLOWED_URLS:
+        for candidate in allowed:
             try:
                 self.base = candidate
                 health = self.request('/api/health', timeout=2)

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Create a complete file inventory and untruncated text chunks for WorkBuddy."""
+from ensure_latest import entrypoint
+if __name__ == '__main__':
+    entrypoint(__file__)
 from pathlib import Path
 import argparse,hashlib,json,re,zipfile
 import xml.etree.ElementTree as ET

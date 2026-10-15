@@ -56,7 +56,7 @@ def source_files():
     files = []
     for path in sorted(SOURCE.rglob('*')):
         rel = path.relative_to(SOURCE)
-        if '__pycache__' in rel.parts or path.suffix == '.pyc':
+        if '__pycache__' in rel.parts or path.suffix == '.pyc' or rel.name in ('connection.json','connection.local.json'):
             continue
         if path.is_symlink():
             raise ValueError('安装包不应包含软链接')
@@ -93,11 +93,18 @@ def install(client, home, work, mode, python, check=True):
     target = home / CLIENT_ROOTS[client] / NAME
     if target.is_symlink():
         raise ValueError('已有同名 Skill 是软链接，请由当前智能体核实归属后选用已确认的技能目录')
+    saved_connections = {name: (target/name).read_bytes() for name in ('connection.json','connection.local.json') if (target/name).is_file()}
+    existing_profile = json.loads(saved_connections['connection.json']) if 'connection.json' in saved_connections else None
     client_work = work / client
     client_work.mkdir(parents=True, exist_ok=True)
-    runtime_python = prepare_python(client_work, python)
+    reusable = python or ((existing_profile or {}).get('python'))
+    runtime_python = prepare_python(client_work, reusable)
     profile = {'base_url': base, 'mode': mode, 'client': client, 'python': runtime_python,
                'work_root': str(work), 'data_source': 'live NAS API', 'result_cache': False}
+    if existing_profile:
+        profile = {**profile, **existing_profile}
+        if python:
+            profile['python'] = runtime_python
     target.parent.mkdir(parents=True, exist_ok=True)
     expected = {rel.as_posix(): hashlib.sha256(src.read_bytes()).hexdigest() for src, rel in files}
     unchanged = target.is_dir() and all((target / rel).is_file() and hashlib.sha256((target / rel).read_bytes()).hexdigest() == digest for rel, digest in expected.items())
@@ -113,8 +120,13 @@ def install(client, home, work, mode, python, check=True):
             shutil.move(str(target), str(backup))
         try:
             target.mkdir()
+            if backup is not None:
+                shutil.copytree(backup, target, dirs_exist_ok=True, symlinks=True,
+                                ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
             for src, rel in files:
                 dest = target / rel
+                if any(p.is_symlink() for p in [dest, *dest.parents] if p != target and target in p.parents):
+                    raise ValueError('新版文件与本机软链接冲突，已保留旧版')
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 with src.open('rb') as incoming, dest.open('wb') as outgoing:
                     shutil.copyfileobj(incoming, outgoing)
@@ -127,6 +139,8 @@ def install(client, home, work, mode, python, check=True):
             if backup is not None:
                 shutil.move(str(backup), str(target))
             raise
+    for name, content in saved_connections.items():
+        (target/name).write_bytes(content)
     profile_path = target / 'connection.json'
     old_profile = json.loads(profile_path.read_text(encoding='utf-8')) if profile_path.exists() else None
     if old_profile != profile:

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Read a case or selected source pages from the live NAS."""
+from ensure_latest import entrypoint
+if __name__ == '__main__':
+    entrypoint(__file__)
 import argparse
 import json
 from kb_client import KBClient

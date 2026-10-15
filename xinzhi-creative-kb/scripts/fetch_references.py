@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Download selected originals and previews from the company NAS, never Windows."""
+from ensure_latest import entrypoint
+if __name__ == '__main__':
+    entrypoint(__file__)
 from pathlib import Path
 import argparse,json,re
 from kb_client import KBClient

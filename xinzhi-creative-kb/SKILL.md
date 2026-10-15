@@ -5,11 +5,15 @@ description: 从公司NAS的心智创意知识库检索项目案例、方案页�
 
 # 心智创意知识库
 
+**每次调用本Skill，先检查并自动更新，再继续使用。** 使用安装配置中的Python运行 `scripts/ensure_latest.py`。它只检查固定的官方安装仓库；发现新版后校验文件、备份旧版、保留本机连接配置与自有文件，再更新。返回 `updated` 时重新读取本地 `SKILL.md` 和需要的参考文档，按新版流程继续原任务。不要反复要求用户手动更新。
+
+查询、查页、取附件和项目资料准备脚本也会在入口自动检查；更新成功后会自动重新执行原命令。更新提示写入标准错误，不混进查询JSON。返回 `kept_current` 表示检查或更新没有完成，保留当前版本继续任务并简短说明；本机管理文件有改动时保留修改，不直接覆盖。返回 `blocked` 或退出码3时停止依赖该Skill的步骤，说明原因与恢复需求，不能绕过宿主权限。MCP长连接若已加载旧代码，更新后由当前智能体重新连接；常驻MCP调用本身不代替本Skill入口检查。
+
 **当前部署方式：NAS保存索引与原件，当前智能体负责理解Brief和判断适配性。NAS不运行大模型。** 按项目找参考时，先读[项目参考工作流](references/project-reference-workflow.md)。每次任务运行 `scripts/find_references.py --options` 读取服务端当前用途、覆盖与工作步骤，再做用途/页级检索；原有 `query_cases.py` 继续用于全源目录与网站筛选。
 
 方案使用 `--role project_proposal`，学习资料使用 `--role learning_material`，执行模板使用 `--role execution_tool`。视觉任务可同时传 `--role project_proposal --role visual_reference --require-image`，找到后必须实际查看图像。`material_roles` 和 `classification_basis` 用于识别用途及归类依据，不能把标题规则当作全文人工核验。
 
-用几个短查询分别回应不同业务问题，空格分开的词是AND。例如先查 `--query '区域 认知'`，再查 `--query '客流 渠道'`；保留用户选定的硬条件。不要把整段Brief直接扔进关键词框，也不要因方案提到培训就把它当课件。找到后运行 `scripts/find_references.py --case-id <ID> --page <原页码> --radius 1` 读取命中页和相邻页；段号不是Word排版页码。旧接口仍可用，但页级脚本是本次能力升级，已有旧版安装需要更新一次；日后新增资料入库不需要反复更新脚本。
+用几个短查询分别回应不同业务问题，空格分开的词是AND。例如先查 `--query '区域 认知'`，再查 `--query '客流 渠道'`；保留用户选定的硬条件。不要把整段Brief直接扔进关键词框，也不要因方案提到培训就把它当课件。找到后运行 `scripts/find_references.py --case-id <ID> --page <原页码> --radius 1` 读取命中页和相邻页；段号不是Word排版页码。1.2及更早安装还没有自动更新器，需要先更新一次；1.3起在调用时检查后续版本。案例内容更新仍直接读取NAS，无需下载整库。
 
 从公司 NAS 实时读取分类、案例、页面和原件。安装后读取本 Skill 的 `connection.json`，其中已有网络地址、可用 Python 和输出根目录；直接运行附带脚本即可，无需成员手填网址、环境变量或 MCP 配置。所有查询都是只读。使用公司内网 http://192.168.1.251:8798。连接失败时报告，不切到公网镜像或要求开放外网。
 
