@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "name": "xinzhi-creative-kb",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "min_python": [
     3,
     10
@@ -9,13 +9,13 @@
   "files": [
     {
       "path": "SKILL.md",
-      "bytes": 9794,
-      "sha256": "ea1cda8334ef5f2dd0e518d2c562d113ae7912b25d6932db09d5d6b109d51d7b"
+      "bytes": 14121,
+      "sha256": "f2b0a090862ba56380ecd1ae8e05f615af2759e08f70f6ecc1e3cea01d036b2b"
     },
     {
       "path": "references/project-reference-workflow.md",
-      "bytes": 5277,
-      "sha256": "1d2d9a7df63b79cf8d31e01af817c05f24d576610d0a88da152e9979487f0600"
+      "bytes": 6110,
+      "sha256": "4faf17b5a1046fe03d807bc8c864ad1514215cd4473e6ca9f0349a4904e8d71d"
     },
     {
       "path": "scripts/ensure_latest.py",
@@ -28,9 +28,14 @@
       "sha256": "b2e9443111741f4b9bf573c6d62af3c78e0bf78ef2f1e4076e89b1fd1c4ecb5e"
     },
     {
+      "path": "scripts/find_by_brief.py",
+      "bytes": 5140,
+      "sha256": "947b3fd9e6c56a1ba650fdf0e4865e21463ed00c2a5c07b1712b468bf6c16453"
+    },
+    {
       "path": "scripts/find_references.py",
-      "bytes": 1859,
-      "sha256": "5f888366a665ef3d82b144a8ca4cf7d70bd5c326fbad70de41ca213526b82c6e"
+      "bytes": 3414,
+      "sha256": "6150d15bf2094bad4ef744373d1e2d25b909e2a998d64d1a8b9181938bdfb2ee"
     },
     {
       "path": "scripts/inspect_case.py",
@@ -39,8 +44,8 @@
     },
     {
       "path": "scripts/kb_client.py",
-      "bytes": 8018,
-      "sha256": "955951d33b5a37a2527f3762f1054d0c796b783ab4f4e6ff92284b08aa377d5b"
+      "bytes": 9911,
+      "sha256": "427136340024e5d736ae1e8f046927157a568bed1afef8f4440c776a382d200b"
     },
     {
       "path": "scripts/prepare_project.py",
@@ -49,8 +54,8 @@
     },
     {
       "path": "scripts/query_cases.py",
-      "bytes": 1752,
-      "sha256": "e23f94b5e74a8529dc8409fb9ff70c9deddb3d16b4f01d80fc3f228958b29d1b"
+      "bytes": 1773,
+      "sha256": "7c21be43165e0319482db3f07e0c44202c0af6f9f99407640ac7d3a6fe7fa5a8"
     }
   ]
 }

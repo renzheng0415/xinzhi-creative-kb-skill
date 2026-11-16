@@ -70,9 +70,18 @@ class KBClient:
         raise RuntimeError('公司 NAS 暂时不可达：请接入公司网络。')
 
     def request(self, path, body=None, timeout=20):
-        if path not in ('/api/health', '/api/filters', '/api/search', '/api/reference-options', '/api/references/search', '/api/references/read') and not re.fullmatch(r'/api/assets/[\w-]{1,100}', path):
+        allowed_static = (
+            '/api/health', '/api/filters', '/api/search',
+            '/api/reference-options', '/api/references/search',
+            '/api/references/brief', '/api/references/read',
+        )
+        if (
+            path not in allowed_static
+            and not re.fullmatch(r'/api/assets/[\w-]{1,100}', path)
+            and not re.fullmatch(r'/api/projects/[\w-]{1,120}', path)
+        ):
             raise ValueError('只允许只读知识库接口')
-        if body is not None and path not in ('/api/search', '/api/references/search', '/api/references/read'):
+        if body is not None and path not in ('/api/search', '/api/references/search', '/api/references/brief', '/api/references/read'):
             raise ValueError('此接口只允许读取')
         req = urllib.request.Request(self.base + path,
             data=json.dumps(body, ensure_ascii=False).encode('utf-8') if body is not None else None,
@@ -110,8 +119,16 @@ class KBClient:
                 raise ValueError('所选页不存在')
             preview_path = picked.get('image_path')
         else:
-            preview_path = asset.get('preview_path')
-        website = self.base + ('/ai-videos' if 'AI生视频' in asset.get('outputs', []) else '/ai-images' if 'AI 生图与生视频' in asset.get('topics', []) else '/')
+            preview_path = asset.get('preview_path') or next(
+                (u.get('image_path') for u in asset.get('evidence_units', []) if u.get('image_path')),
+                None,
+            )
+        collection = asset.get('collection', '')
+        website = self.base + (
+            '/ai-videos' if 'AI生视频' in asset.get('outputs', []) or collection == 'ai_videos'
+            else '/ai-images' if 'AI 生图与生视频' in asset.get('topics', []) or collection == 'ai_images'
+            else '/'
+        )
         if asset.get('gallery_item'):
             website = self.base + '/ai-videos?item=' + urllib.parse.quote(asset['gallery_item'])
         return {'original': self.file_url(asset.get('original_path')),
@@ -151,6 +168,32 @@ class KBClient:
                 for evidence in unit.get('evidence', []):
                     evidence['url'] = self.file_url(evidence.get('image_path'))
         result['connection'] = {'base_url': self.base, 'source': 'company NAS'}
+        return result
+
+    def brief_references(self, payload):
+        result = self.request('/api/references/brief', payload)
+        for need in result.get('needs', []):
+            for asset in need.get('items', []):
+                asset['links'] = self.links(asset)
+                for unit in asset.get('evidence_units', []):
+                    unit['url'] = self.file_url(unit.get('image_path'))
+        result['connection'] = {'base_url': self.base, 'source': 'company NAS'}
+        return result
+
+    def project(self, project_id):
+        if not re.fullmatch(r'[\w-]{1,120}', str(project_id or '')):
+            raise ValueError('非法项目卡 ID')
+        result = self.request('/api/projects/' + project_id)
+        proj = result.get('project') if isinstance(result, dict) and 'project' in result else result
+        if isinstance(proj, dict):
+            proj['preview_url'] = self.file_url(proj.get('preview_path'))
+            for items in (proj.get('assets_by_role') or {}).values():
+                if isinstance(items, list):
+                    for item in items:
+                        if isinstance(item, dict):
+                            item['preview_url'] = self.file_url(item.get('preview_path'))
+        if isinstance(result, dict):
+            result['connection'] = {'base_url': self.base, 'source': 'company NAS'}
         return result
 
     def context(self, asset_id, page=1, radius=1):
