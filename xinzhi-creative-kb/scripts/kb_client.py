@@ -6,6 +6,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path, PurePosixPath
 
 LAN_URL = 'http://192.168.1.251:8798'
@@ -47,6 +48,114 @@ def validate_base(value, allowed=None):
     return value
 
 
+def _skill_root():
+    return Path(__file__).resolve().parent.parent
+
+
+def _canonical_client_id(value):
+    if not isinstance(value, str) or not value.strip():
+        return ''
+    try:
+        return str(uuid.UUID(value.strip()))
+    except (ValueError, AttributeError, TypeError):
+        return ''
+
+
+def _member_header(value):
+    """Send a name only when the local file contains one. Never read the OS user."""
+    if not isinstance(value, str):
+        return ''
+    text = ''.join(ch for ch in value.strip() if ch.isprintable() and ch not in '\r\n')
+    if not text:
+        return ''
+    try:
+        text.encode('latin-1')
+        return text[:80]
+    except UnicodeEncodeError:
+        while text and len(urllib.parse.quote(text, safe='')) > 80:
+            text = text[:-1]
+        return urllib.parse.quote(text, safe='') if text else ''
+
+
+def _read_local_object(path):
+    if not path.is_file():
+        return {}
+    text = path.read_text(encoding='utf-8').strip()
+    if not text:
+        return {}
+    data = json.loads(text)
+    if not isinstance(data, dict):
+        raise ValueError('connection.local.json 必须是 JSON 对象')
+    return data
+
+
+def _write_local_object(path, data):
+    payload = json.dumps(data, ensure_ascii=False, indent=2) + '\n'
+    temporary = path.with_name('.connection.local.json.tmp')
+    temporary.write_text(payload, encoding='utf-8')
+    try:
+        os.chmod(temporary, 0o600)
+    except OSError:
+        pass
+    os.replace(temporary, path)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
+def _lock_local(path):
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+    if os.name == 'nt':
+        import msvcrt
+        if os.lseek(descriptor, 0, os.SEEK_END) == 0:
+            os.write(descriptor, b'0')
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+    return descriptor
+
+
+def _unlock_local(descriptor):
+    if os.name == 'nt':
+        import msvcrt
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+    os.close(descriptor)
+
+
+def ensure_client_identity(root=None):
+    """Random id for this install. Not derived from hostname, username, or MAC."""
+    root = Path(root) if root else _skill_root()
+    path = root / 'connection.local.json'
+    root.mkdir(parents=True, exist_ok=True)
+    lock = root / '.client-id.lock'
+    descriptor = _lock_local(lock)
+    try:
+        data = _read_local_object(path)
+        client_id = _canonical_client_id(data.get('client_id'))
+        if not client_id or data.get('client_id') != client_id:
+            client_id = client_id or str(uuid.uuid4())
+            data['client_id'] = client_id
+            _write_local_object(path, data)
+        return client_id, _member_header(data.get('member_name'))
+    finally:
+        _unlock_local(descriptor)
+
+
+def kb_headers(root=None, body=False):
+    """Headers for the company knowledge base only. GitHub updates do not use this."""
+    client_id, member = ensure_client_identity(root)
+    headers = {'Cache-Control': 'no-cache', 'X-KB-Client-Id': client_id}
+    if member:
+        headers['X-KB-Member'] = member
+    if body:
+        headers['Content-Type'] = 'application/json'
+    return headers
+
+
 class KBClient:
     def __init__(self, base_url=None):
         # Company traffic must not go through a system HTTP proxy.
@@ -85,7 +194,7 @@ class KBClient:
             raise ValueError('此接口只允许读取')
         req = urllib.request.Request(self.base + path,
             data=json.dumps(body, ensure_ascii=False).encode('utf-8') if body is not None else None,
-            headers={'Cache-Control': 'no-cache', **({'Content-Type': 'application/json'} if body is not None else {})})
+            headers=kb_headers(body=body is not None))
         try:
             with self.opener.open(req, timeout=timeout) as reply:
                 raw = reply.read(16 * 1024 * 1024 + 1)
@@ -150,7 +259,8 @@ class KBClient:
         if url is None:
             raise ValueError('此记录没有附件路径')
         try:
-            with self.opener.open(url, timeout=30) as reply:
+            outbound = urllib.request.Request(url, headers=kb_headers())
+            with self.opener.open(outbound, timeout=30) as reply:
                 raw = reply.read(50 * 1024 * 1024 + 1)
         except OSError:
             raise RuntimeError('NAS 附件取回失败，请检查网络或使用原件链接') from None

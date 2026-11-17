@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "name": "xinzhi-creative-kb",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "min_python": [
     3,
     10
@@ -9,8 +9,8 @@
   "files": [
     {
       "path": "SKILL.md",
-      "bytes": 14121,
-      "sha256": "f2b0a090862ba56380ecd1ae8e05f615af2759e08f70f6ecc1e3cea01d036b2b"
+      "bytes": 14517,
+      "sha256": "1b355dfb269ea6177481091bdcd5bf685f4be62d13b09c7d4f939ff550815ce1"
     },
     {
       "path": "references/project-reference-workflow.md",
@@ -44,8 +44,8 @@
     },
     {
       "path": "scripts/kb_client.py",
-      "bytes": 9911,
-      "sha256": "427136340024e5d736ae1e8f046927157a568bed1afef8f4440c776a382d200b"
+      "bytes": 13287,
+      "sha256": "2ebeeb86d6493e1024b156e509594ea9f01fd7be56f4c2e7444019ddce937eab"
     },
     {
       "path": "scripts/prepare_project.py",

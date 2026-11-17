@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 NAME = 'xinzhi-creative-kb'
 SOURCE = ROOT / NAME
 sys.path.insert(0, str(SOURCE / 'scripts'))
-from kb_client import KBClient, LAN_URL
+from kb_client import LAN_URL
 
 CLIENT_ROOTS = {
     'workbuddy': '.codebuddy/skills',
@@ -161,7 +162,11 @@ def install(client, home, work, mode, python, check=True):
                 capture_output=True, text=True, encoding='utf-8', timeout=30, check=True,
                 env={k: v for k, v in os.environ.items() if k != 'XINZHI_KB_URL'})
             filters = json.loads(result.stdout)
-            client_api = KBClient(base)
+            installed_spec = importlib.util.spec_from_file_location(
+                'xinzhi_installed_kb_client', target / 'scripts/kb_client.py')
+            installed_module = importlib.util.module_from_spec(installed_spec)
+            installed_spec.loader.exec_module(installed_module)
+            client_api = installed_module.KBClient(base)
             health = client_api.request('/api/health')
             sample = client_api.search(collection='cases', limit=1)
             if health.get('status') != 'ok' or health.get('service') != 'company-creative-kb-mvp' or not filters.get('options') or not sample.get('items'):

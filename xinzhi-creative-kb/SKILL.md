@@ -1,6 +1,6 @@
 ---
 name: xinzhi-creative-kb
-version: 1.5.0
+version: 1.6.0
 description: 从公司NAS的心智创意知识库检索项目案例、方案页面、海报及AI图片视频参考，为当前项目挑选有依据的案例。支持按结构化Brief需求单一次检索、同项目卡片串联及页级回读，支持员工公司内网及已授权的Tailscale私网。
 ---
 
@@ -24,7 +24,7 @@ description: 从公司NAS的心智创意知识库检索项目案例、方案页�
 
 **资料保持最新：** 每次新任务先执行 `scripts/find_by_brief.py --options` 或 `scripts/query_cases.py --options` 读取网站当下的分类和数量，再执行检索；不缓存案例列表，不把本文中举例的标签当成完整分类。网站新增、修正、删除案例或标签后，下次查询以已发布的最新索引为准，无需重装 Skill。仅复制原始文件到共享盘、尚未入库建索引的资料不会自动出现在检索结果里。网站地址和接口保持兼容时，安装包不随资料更新而更新。
 
-用 `connection.json` 中的 Python 执行脚本，输出写入其中 `work_root` 下的项目检索目录。没有本机安装配置时可使用宿主 Python；默认公司内网 `http://192.168.1.251:8798`，远程私网通过本机 `connection.local.json` 已授权的私有地址访问。全文提取 PDF 需要 pypdf，缺少依赖时用宿主文档工具补读；提取完成不等于全部资料已读。已有 MCP 工具可继续使用（含 `search_references_by_brief` 与 `get_project_card`），但正常使用本 Skill 的 HTTP 脚本不依赖 MCP 设置。
+用 `connection.json` 中的 Python 执行脚本，输出写入其中 `work_root` 下的项目检索目录。没有本机安装配置时可使用宿主 Python；默认公司内网 `http://192.168.1.251:8798`，远程私网通过本机 `connection.local.json` 已授权的私有地址访问。Skill 会在这份本机文件里保存一个随机生成的编号，访问知识库时带上，供维护时统计不同电脑的检索效果。可以在同一文件填写 `member_name`，填写后才会发送姓名；不填不发送，也不会读取系统用户名。全文提取 PDF 需要 pypdf，缺少依赖时用宿主文档工具补读；提取完成不等于全部资料已读。已有 MCP 工具可继续使用（含 `search_references_by_brief` 与 `get_project_card`），但正常使用本 Skill 的 HTTP 脚本不依赖 MCP 设置。
 
 网页入口有方案与案例 `/`、AI 生图 `/ai-images`、AI 视频 `/ai-videos`、短剧 Skill `/short-drama-skills`、新媒体短视频 `/short-videos`、新媒体直播 `/livestreams`。检索参数 `collection` 可选 `cases`、`ai_images`、`ai_videos`、`short_drama_skills`、`short_videos`、`livestreams`、`all`；找地产/商业项目案例与成品海报时建议设 `--collection cases`（`find_by_brief.py` 默认 `cases`），避免混入 AI 技能卡；查短剧工具可传 `--collection short_drama_skills`，图片画风/用途可加 `--style 海报` 等实际标签。
 
@@ -58,7 +58,7 @@ description: 从公司NAS的心智创意知识库检索项目案例、方案页�
 返回给发起请求的当前智能体会话：先列需求与来源，再给3—5个候选，逐项说明“匹配了哪个需求、靠哪个查询或标签命中、借鉴哪种方法、哪些条件不同、证据在哪页”。使用 `scripts/fetch_references.py --case-id <ID> --page <ID:页码> --out <本次参考包目录>` 从NAS取回原图/页面和方案原件；它不连接Windows。结合客户端可用的图片/文件附件能力，把预览图、参考清单和原件发回当前使用者。没有附件能力时给可访问的内网链接和已生成文件位置，并说明未实际发送附件；不要声称已发出。向其它群或人员发送需明确目标授权。
 
 
-**版本 1.5.0。** 新增结构化需求单接口与脚本 `scripts/find_by_brief.py`（一次调用融合多路短查询、标注软偏好异同、整体 ≤ 30KB），新增同项目卡片查询 `--project-id`，`find_references.py` 默认 `--detail brief` 并支持 `--year` / `--year-from` / `--year-to` / `--district` / `--sort recent` 及城市别名兼容。
+**版本 1.6.0。** 访问知识库时带上本机随机编号；姓名只在 `connection.local.json` 里填写 `member_name` 后才发送。1.5.0 新增结构化需求单接口与脚本 `scripts/find_by_brief.py`（一次调用融合多路短查询、标注软偏好异同、整体 ≤ 30KB），新增同项目卡片查询 `--project-id`，`find_references.py` 默认 `--detail brief` 并支持 `--year` / `--year-from` / `--year-to` / `--district` / `--sort recent` 及城市别名兼容。
 
 ## 平面设计师视觉与海报参考检索指南
 
